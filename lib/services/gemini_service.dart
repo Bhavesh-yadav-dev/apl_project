@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 /// Returns the base64-encoded PNG bytes, or null on failure.
 class GeminiService {
   // ── PASTE YOUR KEY HERE ──────────────────────────────────────────────────
-  static const _apiKey = 'api key';
+  static const _apiKey = 'AIzaSyAqC0FIeQilF_ZSg2jHh8YgM3f0GM3zR3I';
   // ────────────────────────────────────────────────────────────────────────
 
   static const _model = 'gemini-2.0-flash-preview-image-generation';
