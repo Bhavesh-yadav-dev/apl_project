@@ -128,6 +128,7 @@ After deploying, add your domain to Firebase Console → Authentication → Auth
 
 ---
 
+
 ## Design
 
 - IPL 2026 theme — deep navy background, trophy gold (`#D4AF37`), electric blue accents
