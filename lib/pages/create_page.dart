@@ -52,7 +52,14 @@ class _CreatePageState extends State<CreatePage> {
   @override
   void initState() {
     super.initState();
+    // If already signed in (e.g. returning user), skip auth step
     if (AuthService.currentUser != null) setState(() => _step = 'form');
+    // Also listen for auth state changes (covers email + Google popup)
+    AuthService.authStateChanges.listen((user) {
+      if (user != null && mounted && _step == 'auth') {
+        setState(() => _step = 'form');
+      }
+    });
   }
 
   @override
@@ -65,13 +72,19 @@ class _CreatePageState extends State<CreatePage> {
 
   Future<void> _signIn() async {
     setState(() => _signingIn = true);
-    final user = await AuthService.signInWithGoogle();
-    if (!mounted) return;
-    if (user != null) {
-      setState(() { _step = 'form'; _signingIn = false; });
-    } else {
+    try {
+      final user = await AuthService.signInWithGoogle();
+      if (!mounted) return;
+      // user null = popup closed — auth state listener handles success
+      if (user != null) setState(() { _step = 'form'; _signingIn = false; });
+      else setState(() => _signingIn = false);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       setState(() => _signingIn = false);
-      _snack('Sign-in cancelled. Please try again.');
+      _snack(AuthService.friendlyError(e.code));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _signingIn = false);
     }
   }
 

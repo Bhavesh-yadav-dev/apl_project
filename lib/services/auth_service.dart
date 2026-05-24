@@ -1,9 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
-  static final _googleSignIn = GoogleSignIn();
+
+  // On web, google_sign_in needs the OAuth client ID explicitly.
+  // On Android it reads from google-services.json automatically.
+  static final _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb
+        ? '189192017588-YOUR_WEB_CLIENT_ID.apps.googleusercontent.com'
+        : null,
+    scopes: ['email'],
+  );
 
   static User? get currentUser => _auth.currentUser;
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -11,15 +20,30 @@ class AuthService {
   // ── Google ────────────────────────────────────────────────────────────────
   static Future<User?> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final result = await _auth.signInWithCredential(credential);
-      return result.user;
+      if (kIsWeb) {
+        // Web: use Firebase's built-in Google popup — no google_sign_in needed
+        final provider = GoogleAuthProvider()
+          ..addScope('email')
+          ..setCustomParameters({'prompt': 'select_account'});
+        final result = await _auth.signInWithPopup(provider);
+        return result.user;
+      } else {
+        // Android / iOS: use google_sign_in package
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return null;
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final result = await _auth.signInWithCredential(credential);
+        return result.user;
+      }
+    } on FirebaseAuthException catch (e) {
+      // popup closed by user — treat as cancel, not error
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request') return null;
+      rethrow;
     } catch (_) {
       return null;
     }
